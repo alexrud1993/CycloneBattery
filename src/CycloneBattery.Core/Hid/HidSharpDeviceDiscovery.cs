@@ -4,60 +4,41 @@ using CycloneBattery.Core.Protocol;
 
 namespace CycloneBattery.Core.Hid;
 
-/// <summary>
-/// <see cref="IHidDeviceDiscovery"/> / <see cref="ICycloneHidTransportFactory"/> implementation
-/// backed by HidSharp.
-/// </summary>
-/// <remarks>
-/// Every HidSharp call that can fail is wrapped: a device that is present but owned by another
-/// program (typically GameSir Connect) must degrade into a <c>Busy</c> state, never into a crash.
-/// Device paths are scrubbed out of exception text before it leaves this class.
-/// </remarks>
 public sealed class HidSharpDeviceDiscovery : IHidDeviceDiscovery, ICycloneHidTransportFactory
 {
-    /// <inheritdoc />
     public IReadOnlyList<HidDeviceCandidate> EnumerateCandidates()
     {
         var candidates = new List<HidDeviceCandidate>();
-
         foreach (HidDevice device in SafeGetHidDevices(CycloneProtocol.VendorId, CycloneProtocol.ProductId))
         {
             candidates.Add(ToCandidate(device));
         }
-
         return candidates;
     }
 
-    /// <inheritdoc />
     public ControllerIdentity DetectIdentity()
     {
         ControllerIdentity best = ControllerIdentity.None;
-
         foreach (HidDevice device in SafeGetHidDevices(null, null))
         {
             ControllerIdentity identity = ControllerIdentityExtensions.FromUsb(
                 SafeValue(() => device.VendorID),
                 SafeValue(() => device.ProductID));
-
             best = Stronger(best, identity);
-
             if (best == ControllerIdentity.XInput)
             {
-                // The supported identity wins outright; no need to keep scanning.
                 return best;
             }
         }
-
         return best;
     }
 
-    /// <inheritdoc />
     public TransportOpenResult TryOpen(HidDeviceCandidate candidate, out ICycloneHidTransport? transport)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         transport = null;
 
-        HidDevice? device = null;
+        HidDevice? device;
         try
         {
             device = SafeGetHidDevices(CycloneProtocol.VendorId, CycloneProtocol.ProductId)
@@ -80,7 +61,6 @@ public sealed class HidSharpDeviceDiscovery : IHidDeviceDiscovery, ICycloneHidTr
         }
         catch (UnauthorizedAccessException ex)
         {
-            // Access denied: another process (usually GameSir Connect) owns the interface.
             return TransportOpenResult.Failed(Scrub(ex, candidate.DevicePath), true);
         }
         catch (IOException ex)
@@ -94,7 +74,6 @@ public sealed class HidSharpDeviceDiscovery : IHidDeviceDiscovery, ICycloneHidTr
 
         int maxInput = SafeValue(() => device.GetMaxInputReportLength());
         int maxOutput = SafeValue(() => device.GetMaxOutputReportLength());
-
         transport = new HidSharpTransport(candidate, stream, maxInput, maxOutput);
         return TransportOpenResult.Opened();
     }
@@ -118,21 +97,14 @@ public sealed class HidSharpDeviceDiscovery : IHidDeviceDiscovery, ICycloneHidTr
         }
         catch (Exception ex) when (IsExpectedHidFailure(ex))
         {
-            // No usable HID stack, or the device vanished mid-enumeration.
             return Array.Empty<HidDevice>();
         }
     }
 
     private static int SafeValue(Func<int> read)
     {
-        try
-        {
-            return read();
-        }
-        catch (Exception ex) when (IsExpectedHidFailure(ex))
-        {
-            return 0;
-        }
+        try { return read(); }
+        catch (Exception ex) when (IsExpectedHidFailure(ex)) { return 0; }
     }
 
     private static string? SafeString(Func<string?> read)
@@ -153,16 +125,11 @@ public sealed class HidSharpDeviceDiscovery : IHidDeviceDiscovery, ICycloneHidTr
         IOException => true,
         UnauthorizedAccessException => true,
         NotSupportedException => true,
-        PlatformNotSupportedException => true,
         InvalidOperationException => true,
-        ObjectDisposedException => true,
         TimeoutException => true,
         _ => false,
     };
 
-    /// <summary>
-    /// Heuristic for the Windows messages that mean "another program has this device open".
-    /// </summary>
     internal static bool LooksBusy(Exception ex)
     {
         if (ex is UnauthorizedAccessException)
@@ -185,7 +152,6 @@ public sealed class HidSharpDeviceDiscovery : IHidDeviceDiscovery, ICycloneHidTr
         {
             text = text.Replace(devicePath, HidDevicePathSanitizer.Sanitize(devicePath), StringComparison.OrdinalIgnoreCase);
         }
-
         return text;
     }
 
