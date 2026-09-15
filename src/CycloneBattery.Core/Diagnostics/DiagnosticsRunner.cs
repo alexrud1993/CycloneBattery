@@ -88,11 +88,11 @@ public sealed class DiagnosticsRunner
                         continue;
                     }
 
-                    if (BatteryFrameParser.TryParse(frame.Span, out BatteryReading reading, out _))
+                    if (BatteryFrameParser.TryParse(frame.Span, out BatteryReading sampleReading, out _))
                     {
                         confirmedFrames++;
-                        minPercent = minPercent is null ? reading.BatteryPercent : Math.Min(minPercent.Value, reading.BatteryPercent);
-                        maxPercent = maxPercent is null ? reading.BatteryPercent : Math.Max(maxPercent.Value, reading.BatteryPercent);
+                        minPercent = minPercent is null ? sampleReading.BatteryPercent : Math.Min(minPercent.Value, sampleReading.BatteryPercent);
+                        maxPercent = maxPercent is null ? sampleReading.BatteryPercent : Math.Max(maxPercent.Value, sampleReading.BatteryPercent);
                     }
                 }
             }

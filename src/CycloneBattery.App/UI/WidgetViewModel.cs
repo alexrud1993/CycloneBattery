@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using CycloneBattery.Core.Models;
+using MediaColor = System.Windows.Media.Color;
 
 namespace CycloneBattery.App.UI;
 
@@ -14,11 +15,11 @@ namespace CycloneBattery.App.UI;
 /// </remarks>
 public sealed class WidgetViewModel : INotifyPropertyChanged
 {
-    private static readonly Brush HealthyBrush = Freeze(new SolidColorBrush(Color.FromRgb(76, 175, 80)));
-    private static readonly Brush MediumBrush = Freeze(new SolidColorBrush(Color.FromRgb(255, 193, 7)));
-    private static readonly Brush LowBrush = Freeze(new SolidColorBrush(Color.FromRgb(244, 67, 54)));
-    private static readonly Brush ChargingBrush = Freeze(new SolidColorBrush(Color.FromRgb(33, 150, 243)));
-    private static readonly Brush MutedBrush = Freeze(new SolidColorBrush(Color.FromRgb(120, 120, 120)));
+    private static readonly Brush HealthyBrush = Freeze(new SolidColorBrush(MediaColor.FromRgb(76, 175, 80)));
+    private static readonly Brush MediumBrush = Freeze(new SolidColorBrush(MediaColor.FromRgb(255, 193, 7)));
+    private static readonly Brush LowBrush = Freeze(new SolidColorBrush(MediaColor.FromRgb(244, 67, 54)));
+    private static readonly Brush ChargingBrush = Freeze(new SolidColorBrush(MediaColor.FromRgb(33, 150, 243)));
+    private static readonly Brush MutedBrush = Freeze(new SolidColorBrush(MediaColor.FromRgb(120, 120, 120)));
 
     private ControllerState _state = ControllerState.Disconnected("Starting");
     private int _lowBatteryThresholdPercent = 20;
