@@ -7,18 +7,8 @@ using CycloneBattery.Core.Protocol;
 
 namespace CycloneBattery.Core.Diagnostics;
 
-/// <summary>
-/// Runs a bounded, read-only hardware investigation and produces a
-/// <see cref="DiagnosticsReport"/>.
-/// </summary>
-/// <remarks>
-/// This exists because the developer environment cannot touch the real controller: the output is
-/// designed so that a pasted log alone is enough to tell whether interface selection, report
-/// lengths, heartbeat handling or the byte offsets are the problem.
-/// </remarks>
 public sealed class DiagnosticsRunner
 {
-    /// <summary>Process names that are known to hold the Cyclone 2 HID interface.</summary>
     public static readonly string[] KnownConflictingProcesses =
     [
         "GameSir Connect",
@@ -42,13 +32,6 @@ public sealed class DiagnosticsRunner
         _prober = prober ?? throw new ArgumentNullException(nameof(prober));
     }
 
-    /// <summary>
-    /// Collects a report. Blocking: callers should run this on a background thread.
-    /// </summary>
-    /// <param name="settingsPath">Path of the settings file, for the environment section.</param>
-    /// <param name="logDirectory">Folder logs are written to.</param>
-    /// <param name="appVersion">Version string to print.</param>
-    /// <param name="cancellationToken">Cancels the validation pass.</param>
     public DiagnosticsReport Run(
         string settingsPath,
         string logDirectory,
@@ -79,7 +62,6 @@ public sealed class DiagnosticsRunner
         {
             try
             {
-                // Short confirmation burst: proves the stream is steady, not a one-off frame.
                 var stopwatch = Stopwatch.StartNew();
                 while (stopwatch.ElapsedMilliseconds < 600 && !cancellationToken.IsCancellationRequested)
                 {
@@ -88,11 +70,15 @@ public sealed class DiagnosticsRunner
                         continue;
                     }
 
-                    if (BatteryFrameParser.TryParse(frame.Span, out BatteryReading reading, out _))
+                    if (BatteryFrameParser.TryParse(frame.Span, out BatteryReading confirmationReading, out _))
                     {
                         confirmedFrames++;
-                        minPercent = minPercent is null ? reading.BatteryPercent : Math.Min(minPercent.Value, reading.BatteryPercent);
-                        maxPercent = maxPercent is null ? reading.BatteryPercent : Math.Max(maxPercent.Value, reading.BatteryPercent);
+                        minPercent = minPercent is null
+                            ? confirmationReading.BatteryPercent
+                            : Math.Min(minPercent.Value, confirmationReading.BatteryPercent);
+                        maxPercent = maxPercent is null
+                            ? confirmationReading.BatteryPercent
+                            : Math.Max(maxPercent.Value, confirmationReading.BatteryPercent);
                     }
                 }
             }
@@ -179,15 +165,11 @@ public sealed class DiagnosticsRunner
         return found.ToList();
     }
 
-    /// <summary>
-    /// Renders a report as plain text that can be pasted into a bug report without editing.
-    /// </summary>
     public static string Format(DiagnosticsReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
 
         var sb = new StringBuilder();
-
         sb.AppendLine("=== Cyclone Battery diagnostics ===");
         sb.AppendLine($"Generated (UTC)      : {report.GeneratedAtUtc:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"App version          : {report.AppVersion}");
@@ -238,17 +220,14 @@ public sealed class DiagnosticsRunner
             {
                 sb.AppendLine($"     open error   : {attempt.OpenError}");
             }
-
             if (!string.IsNullOrWhiteSpace(attempt.TransportError))
             {
                 sb.AppendLine($"     transport    : {attempt.TransportError}");
             }
-
             if (attempt.LastParseFailure != ParseFailureReason.None)
             {
                 sb.AppendLine($"     parse reject : {attempt.LastParseFailure}");
             }
-
             if (!string.IsNullOrWhiteSpace(attempt.FirstFrameHex))
             {
                 sb.AppendLine($"     first frame  : {attempt.FirstFrameHex}");
