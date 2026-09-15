@@ -1,6 +1,7 @@
 using CycloneBattery.Core.Hid;
 using CycloneBattery.Core.Models;
 using CycloneBattery.Core.Protocol;
+using CycloneBattery.Core.Services;
 
 namespace CycloneBattery.Core.State;
 
@@ -24,26 +25,21 @@ namespace CycloneBattery.Core.State;
 /// </remarks>
 public sealed class ControllerStateMachine
 {
-    /// <summary>Message shown when another program owns the HID interface.</summary>
     public const string BusyMessage = "Controller interface is busy. Close GameSir Connect and retry.";
-
-    /// <summary>Message shown while the interface is open but the controller is not streaming.</summary>
     public const string WaitingForStatusMessage = "Interface opened, waiting for 0x12 status report";
-
-    /// <summary>Message shown after a stale reading expired.</summary>
     public const string StaleMessage = "No status report received recently";
 
     private readonly IClock _clock;
     private readonly object _gate = new();
-
     private ControllerState _current = ControllerState.Disconnected("Starting");
+    private BatteryReading? _lastKnownReading;
+    private ParseFailureReason? _lastParseFailure;
+    private TimeSpan _staleAfter = TimeSpan.FromSeconds(12);
 
     public ControllerStateMachine(IClock? clock = null) => _clock = clock ?? new SystemClock();
 
-    /// <summary>Raised on the caller's thread whenever <see cref="Current"/> changes.</summary>
     public event EventHandler<ControllerState>? StateChanged;
 
-    /// <summary>How long a connected reading stays valid without a fresh <c>0x12</c> report.</summary>
     public TimeSpan StaleAfter
     {
         get
@@ -53,7 +49,6 @@ public sealed class ControllerStateMachine
                 return _staleAfter;
             }
         }
-
         set
         {
             lock (_gate)
@@ -63,7 +58,6 @@ public sealed class ControllerStateMachine
         }
     }
 
-    /// <summary>The current state.</summary>
     public ControllerState Current
     {
         get
@@ -75,7 +69,6 @@ public sealed class ControllerStateMachine
         }
     }
 
-    /// <summary>The last reading that parsed successfully, even if it has since gone stale.</summary>
     public BatteryReading? LastKnownReading
     {
         get
@@ -87,7 +80,6 @@ public sealed class ControllerStateMachine
         }
     }
 
-    /// <summary>Rejection reason of the most recent frame that was refused.</summary>
     public ParseFailureReason? LastParseFailure
     {
         get
@@ -99,11 +91,6 @@ public sealed class ControllerStateMachine
         }
     }
 
-    private BatteryReading? _lastKnownReading;
-    private ParseFailureReason? _lastParseFailure;
-    private TimeSpan _staleAfter = TimeSpan.FromSeconds(12);
-
-    /// <summary>Applies the result of one discovery + validation pass.</summary>
     public void ApplyProbeOutcome(InterfaceProbeOutcome outcome, ControllerIdentity identity)
     {
         ArgumentNullException.ThrowIfNull(outcome);
@@ -112,15 +99,11 @@ public sealed class ControllerStateMachine
         {
             ProbeOutcomeKind.Success when outcome.FirstReading is { } reading =>
                 ControllerState.Connected(reading, outcome.Transport?.Candidate.SanitizedId),
-
             ProbeOutcomeKind.NoCandidates => ControllerState.Disconnected(identity.Describe()),
-
             ProbeOutcomeKind.AllBusy => ControllerState.Busy(BusyMessage),
-
             ProbeOutcomeKind.OpenedButNoStatus => ControllerState.Connecting(
                 WaitingForStatusMessage,
                 outcome.Attempts.FirstOrDefault(a => a.Opened)?.Candidate.SanitizedId),
-
             _ => ControllerState.Error(DescribeTransportFailure(outcome)),
         };
 
@@ -135,7 +118,6 @@ public sealed class ControllerStateMachine
         Transition(next);
     }
 
-    /// <summary>Applies a freshly validated reading while already connected.</summary>
     public void ApplyReading(BatteryReading reading, string? devicePathId)
     {
         lock (_gate)
@@ -146,10 +128,6 @@ public sealed class ControllerStateMachine
         Transition(ControllerState.Connected(reading, devicePathId));
     }
 
-    /// <summary>
-    /// Records that a frame was rejected. The current state is deliberately left untouched so a
-    /// single bad packet cannot blank the UI.
-    /// </summary>
     public void NoteRejectedFrame(ParseFailureReason reason)
     {
         lock (_gate)
@@ -158,14 +136,8 @@ public sealed class ControllerStateMachine
         }
     }
 
-    /// <summary>Records a transport-level failure without leaving the recoverable states.</summary>
     public void NoteTransportFailure(string message) => Transition(ControllerState.Error(message));
 
-    /// <summary>
-    /// Moves a connected state to <see cref="ControllerStateKind.Disconnected"/> once its reading
-    /// is older than <see cref="StaleAfter"/>.
-    /// </summary>
-    /// <returns><see langword="true"/> when the state actually changed.</returns>
     public bool ExpireStaleReading()
     {
         ControllerState snapshot = Current;
@@ -190,7 +162,6 @@ public sealed class ControllerStateMachine
         return !Equals(previous, Current);
     }
 
-    /// <summary>Forces the state back to disconnected, e.g. when the app is shutting down.</summary>
     public void Reset(string reason) => Transition(ControllerState.Disconnected(reason));
 
     private static string DescribeTransportFailure(InterfaceProbeOutcome outcome)
@@ -217,7 +188,6 @@ public sealed class ControllerStateMachine
             handler = StateChanged;
         }
 
-        // Raised outside the lock: subscribers marshal to the UI thread and must not deadlock us.
         handler?.Invoke(this, next);
     }
 }
