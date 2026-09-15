@@ -1,0 +1,14 @@
+<Application x:Class="CycloneBattery.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+
+    <Application.Resources>
+        <!--
+            No StartupUri: this is a notification-area application. Windows are created
+            explicitly in App.xaml.cs, and the process stays alive until the tray Exit item
+            (or the diagnostics switch finishing) calls Shutdown().
+        -->
+    </Application.Resources>
+
+</Application>

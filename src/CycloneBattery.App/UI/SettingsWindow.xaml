@@ -1,0 +1,51 @@
+<Window x:Class="CycloneBattery.App.UI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cyclone Battery — Settings"
+        Width="420"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False">
+
+    <StackPanel Margin="16">
+
+        <TextBlock Text="General" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8" />
+
+        <CheckBox x:Name="StartWithWindowsCheckBox" Content="Start with Windows" Margin="0,0,0,6" />
+        <CheckBox x:Name="ShowWidgetOnStartupCheckBox" Content="Show widget on startup" Margin="0,0,0,6" />
+        <CheckBox x:Name="AlwaysOnTopCheckBox" Content="Keep widget always on top" Margin="0,0,0,6" />
+        <CheckBox x:Name="HideWhenDisconnectedCheckBox" Content="Hide widget when the controller disconnects" Margin="0,0,0,14" />
+
+        <TextBlock Text="Battery alert" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8" />
+
+        <CheckBox x:Name="AlertEnabledCheckBox" Content="Notify when the battery is low" Margin="0,0,0,6" />
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+            <TextBlock Text="Threshold" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ComboBox x:Name="ThresholdComboBox" Width="90" VerticalAlignment="Center" />
+            <TextBlock Text="%" VerticalAlignment="Center" Margin="4,0,0,0" />
+        </StackPanel>
+
+        <TextBlock Text="Diagnostics" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8" />
+
+        <WrapPanel Margin="0,0,0,14">
+            <Button x:Name="TestNotificationButton" Content="Test notification" MinWidth="130" Padding="8,4" Margin="0,0,8,8" />
+            <Button x:Name="ForceReconnectButton" Content="Force reconnect" MinWidth="130" Padding="8,4" Margin="0,0,8,8" />
+            <Button x:Name="OpenLogFolderButton" Content="Open log folder" MinWidth="130" Padding="8,4" Margin="0,0,8,8" />
+            <Button x:Name="RunDiagnosticsButton" Content="Run diagnostics" MinWidth="130" Padding="8,4" Margin="0,0,8,8" />
+        </WrapPanel>
+
+        <TextBlock x:Name="HintText"
+                   TextWrapping="Wrap"
+                   Foreground="#666666"
+                   FontSize="11"
+                   Text="Settings are stored in %LOCALAPPDATA%\CycloneBattery. This application never changes controller profiles, mappings, calibration, RGB or firmware."
+                   Margin="0,0,0,14" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="OkButton" Content="OK" MinWidth="80" Padding="8,4" Margin="0,0,8,0" IsDefault="True" />
+            <Button x:Name="CancelButton" Content="Cancel" MinWidth="80" Padding="8,4" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

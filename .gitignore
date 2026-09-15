@@ -1,0 +1,29 @@
+# ---- .NET / Visual Studio ----
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+.vs/
+.vscode/
+*.DotSettings.user
+
+# ---- Build output ----
+artifacts/
+publish/
+TestResults/
+*.binlog
+*.log
+
+# ---- Rider / ReSharper ----
+.idea/
+_ReSharper*/
+
+# ---- OS ----
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ---- Local app data / diagnostics captures (never commit device logs) ----
+diagnostic-*.txt
+app-*.log
