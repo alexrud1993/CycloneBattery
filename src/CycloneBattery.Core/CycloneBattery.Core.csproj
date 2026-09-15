@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    CycloneBattery.Core
+    ===================
+    All protocol, HID, state, settings, diagnostics and logging logic lives here.
+    It targets plain net10.0 (no WPF, no Windows-only APIs) so that the unit
+    tests are hardware-free AND platform-independent.
+
+    The only third-party dependency is HidSharp, which is wrapped behind
+    IHidDeviceDiscovery / ICycloneHidTransport and can therefore be swapped
+    without touching the UI or the state machine.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>CycloneBattery.Core</RootNamespace>
+    <AssemblyName>CycloneBattery.Core</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HidSharp" Version="2.6.4" />
+  </ItemGroup>
+
+</Project>
