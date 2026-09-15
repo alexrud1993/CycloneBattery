@@ -1,0 +1,55 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches:
+      - build/windows-exe
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        run: dotnet test -c Release --no-build
+
+      - name: Publish self-contained EXE
+        shell: pwsh
+        run: ./scripts/publish-win-x64.ps1
+
+      - name: Locate EXE
+        id: locate
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path . -Filter CycloneBattery.exe -Recurse | Where-Object { $_.FullName -match 'publish' } | Select-Object -First 1
+          if (-not $exe) { throw 'CycloneBattery.exe not found after publish.' }
+          Write-Host "Found: $($exe.FullName)"
+          "exe_path=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Stage EXE
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          Copy-Item '${{ steps.locate.outputs.exe_path }}' 'artifact/CycloneBattery.exe'
+
+      - name: Upload CycloneBattery.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: CycloneBattery-Windows-x64
+          path: artifact/CycloneBattery.exe
+          if-no-files-found: error
