@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CycloneBattery.Core.Models;
+using CycloneBattery.Core.Protocol;
 
 namespace CycloneBattery.Core.Hid;
 
@@ -34,7 +35,7 @@ public sealed record CandidateProbeResult
     public bool StatusReceived { get; init; }
 
     /// <summary>Rejection reason of the last <c>0x12</c> frame seen, if it was rejected.</summary>
-    public Protocol.ParseFailureReason LastParseFailure { get; init; }
+    public ParseFailureReason LastParseFailure { get; init; }
 
     /// <summary>Hex prefix of the first report observed, for pasted diagnostics.</summary>
     public string FirstFrameHex { get; init; } = "";
@@ -49,50 +50,26 @@ public sealed record CandidateProbeResult
 /// <summary>Why a probe run ended the way it did.</summary>
 public enum ProbeOutcomeKind
 {
-    /// <summary>A working interface was found and validated.</summary>
     Success = 0,
-
-    /// <summary>No HID interface with the supported identity is present.</summary>
     NoCandidates,
-
-    /// <summary>Every candidate exists but could not be opened, and the cause looks like another process.</summary>
     AllBusy,
-
-    /// <summary>An interface opened, but no valid <c>0x12</c> status report arrived.</summary>
     OpenedButNoStatus,
-
-    /// <summary>Every candidate failed with a transport error.</summary>
     TransportFailed,
 }
 
 /// <summary>The complete outcome of one discovery + validation pass.</summary>
 public sealed record InterfaceProbeOutcome
 {
-    /// <summary>Why the pass ended.</summary>
     public required ProbeOutcomeKind Kind { get; init; }
-
-    /// <summary>Per-candidate detail, in probe order. Used verbatim by diagnostics.</summary>
     public IReadOnlyList<CandidateProbeResult> Attempts { get; init; } = Array.Empty<CandidateProbeResult>();
-
-    /// <summary>The open, validated transport when <see cref="Kind"/> is <see cref="ProbeOutcomeKind.Success"/>.</summary>
     public ICycloneHidTransport? Transport { get; init; }
-
-    /// <summary>The first valid reading observed during validation.</summary>
     public BatteryReading? FirstReading { get; init; }
-
-    /// <summary>Whether the wake fallback was what finally produced status reports.</summary>
     public bool NeededWakeFallback { get; init; }
-
-    /// <summary>Total probe duration in milliseconds.</summary>
     public long ElapsedMilliseconds { get; init; }
 
-    /// <summary>Synthetic outcome meaning "no candidate interface is present".</summary>
     public static InterfaceProbeOutcome NoCandidates() => new() { Kind = ProbeOutcomeKind.NoCandidates };
-
-    /// <summary>Synthetic outcome meaning "every candidate is held by another process".</summary>
     public static InterfaceProbeOutcome Busy() => new() { Kind = ProbeOutcomeKind.AllBusy };
 
-    /// <summary>Builds an outcome with the supplied transport closed and released.</summary>
     public void ReleaseTransport()
     {
         try
@@ -101,7 +78,6 @@ public sealed record InterfaceProbeOutcome
         }
         catch
         {
-            // Disposing a transport that already failed must never mask the original outcome.
         }
     }
 }
@@ -109,19 +85,10 @@ public sealed record InterfaceProbeOutcome
 /// <summary>Tunables for <see cref="CycloneInterfaceProber"/>.</summary>
 public sealed record ProbeOptions
 {
-    /// <summary>How long to wait for a <c>0x12</c> frame after sending the heartbeat.</summary>
     public int HeartbeatWaitMilliseconds { get; init; } = 900;
-
-    /// <summary>How long to wait for a <c>0x12</c> frame after sending the wake fallback.</summary>
     public int WakeWaitMilliseconds { get; init; } = 900;
-
-    /// <summary>Blocking slice used while polling for a report.</summary>
     public int PollSliceMilliseconds { get; init; } = 25;
-
-    /// <summary>Defaults used everywhere except tests.</summary>
     public static ProbeOptions Default { get; } = new();
-
-    /// <summary>Longer waits, used by <c>--diagnostics</c> so a slow interface still gets a fair chance.</summary>
     public static ProbeOptions ForDiagnostics { get; } = new()
     {
         HeartbeatWaitMilliseconds = 1200,
