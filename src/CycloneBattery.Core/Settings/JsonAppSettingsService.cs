@@ -4,29 +4,15 @@ using CycloneBattery.Core.Logging;
 
 namespace CycloneBattery.Core.Settings;
 
-/// <summary>Loads and persists <see cref="AppSettings"/>.</summary>
 public interface IAppSettingsService
 {
-    /// <summary>The settings currently in effect. Never <see langword="null"/>.</summary>
     AppSettings Current { get; }
-
-    /// <summary>
-    /// Reads settings from the store. A missing or corrupt file yields the defaults instead of
-    /// throwing.
-    /// </summary>
     AppSettings Load();
-
-    /// <summary>Persists <paramref name="settings"/> and makes them <see cref="Current"/>.</summary>
     void Save(AppSettings settings);
-
-    /// <summary>Where the settings are stored. Used by diagnostics.</summary>
     string Location { get; }
-
-    /// <summary>Raised after a successful <see cref="Save"/>.</summary>
     event EventHandler<AppSettings>? SettingsChanged;
 }
 
-/// <summary>JSON-backed <see cref="IAppSettingsService"/>.</summary>
 public sealed class JsonAppSettingsService : IAppSettingsService
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -36,6 +22,7 @@ public sealed class JsonAppSettingsService : IAppSettingsService
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
     };
 
     private readonly ISettingsStore _store;
@@ -50,7 +37,6 @@ public sealed class JsonAppSettingsService : IAppSettingsService
         _current = Load();
     }
 
-    /// <inheritdoc />
     public AppSettings Current
     {
         get
@@ -62,13 +48,10 @@ public sealed class JsonAppSettingsService : IAppSettingsService
         }
     }
 
-    /// <inheritdoc />
     public string Location => _store.Location;
 
-    /// <inheritdoc />
     public event EventHandler<AppSettings>? SettingsChanged;
 
-    /// <inheritdoc />
     public AppSettings Load()
     {
         string? text;
@@ -106,13 +89,11 @@ public sealed class JsonAppSettingsService : IAppSettingsService
         }
         catch (JsonException ex)
         {
-            // Corrupt or hand-edited file: fall back safely instead of refusing to start.
             _log.Warning(nameof(JsonAppSettingsService), $"Settings file is corrupt, using defaults: {ex.Message}");
             return RememberDefaults();
         }
     }
 
-    /// <inheritdoc />
     public void Save(AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
